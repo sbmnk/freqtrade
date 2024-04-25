@@ -14,10 +14,9 @@ from freqtrade.configuration.environment_vars import enironment_vars_to_dict
 from freqtrade.configuration.load_config import load_file, load_from_files
 from freqtrade.constants import Config
 from freqtrade.enums import NON_UTIL_MODES, TRADE_MODES, CandleType, RunMode, TradingMode
-from freqtrade.exceptions import OperationalException
+from freqtrade.exceptions import OperationalException, ConfigurationError
 from freqtrade.loggers import setup_logging
 from freqtrade.misc import deep_merge_dicts, parse_db_uri_for_logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class Configuration:
     @staticmethod
     def get_static_config():
         if Configuration._config is None:
-            raise Exception("Config not initialised")
+            raise ConfigurationError("Static config retrieval before initialisation")
         return Configuration._config
     @staticmethod
     def from_files(files: List[str]) -> Dict[str, Any]:
