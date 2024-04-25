@@ -125,9 +125,7 @@ class FeatherDataHandler(IDataHandler):
         :return: Dataframe containing trades
         """
         filename = self._pair_trades_filename(self._datadir, pair, trading_mode)
-        print("TRADES_LOAD")
         if not filename.exists():
-            print("NOT FILENAME EXISTS")
             return DataFrame(columns=DEFAULT_TRADES_COLUMNS)
 
         tradesdata = read_feather(filename)

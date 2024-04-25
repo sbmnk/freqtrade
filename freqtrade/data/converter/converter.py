@@ -106,7 +106,7 @@ def ohlcv_fill_up_missing_data(dataframe: DataFrame, timeframe: str, pair: str) 
         'number_of_trades':'sum',
         'taker_buy_quote_volume':'sum'
     }
-    resampling_data_rules = {k:v for k,v in fill_missing_data_rules.items() if k in dataframe}
+    resampling_data_rules = {k:v for k,v in resampling_data_rules.items() if k in dataframe}
     resample_interval = timeframe_to_resample_freq(timeframe)
     # Resample to create "NAN" values
     df = dataframe.resample(resample_interval, on='date').agg(resampling_data_rules)
