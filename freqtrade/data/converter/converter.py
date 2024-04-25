@@ -41,7 +41,7 @@ def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, candle_type: Cand
     # Convert them since TA-LIB indicators used in the strategy assume floats
     # and fail with exception...
     df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_quote_volume': 'float'}
+                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
     df_typing = {k:v for k,v in df_typing.items() if k in df}
     df = df.astype(dtype=df_typing)
     return clean_ohlcv_dataframe(df, timeframe, pair,
@@ -73,7 +73,7 @@ def clean_ohlcv_dataframe(data: DataFrame, timeframe: str, pair: str, *,
         'volume': 'max',
         'quote_asset_volume':'max',
         'number_of_trades':'max',
-        'taker_buy_quote_volume':'max'
+        'taker_buy_volume':'max'
     }
     applicable_grouping_rules = {k:v for k,v in grouping_rules.items() if k in data}
     data = data.groupby(by='date', as_index=False, sort=True).agg(applicable_grouping_rules)
@@ -104,7 +104,7 @@ def ohlcv_fill_up_missing_data(dataframe: DataFrame, timeframe: str, pair: str) 
         'volume': 'sum',
         'quote_asset_volume':'sum',
         'number_of_trades':'sum',
-        'taker_buy_quote_volume':'sum'
+        'taker_buy_volume':'sum'
     }
     resampling_data_rules = {k:v for k,v in resampling_data_rules.items() if k in dataframe}
     resample_interval = timeframe_to_resample_freq(timeframe)

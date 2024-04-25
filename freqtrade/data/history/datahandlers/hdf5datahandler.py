@@ -87,7 +87,7 @@ class HDF5DataHandler(IDataHandler):
         if list(pairdata.columns) != column_set:
             raise ValueError("Wrong dataframe format")
         df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_quote_volume': 'float'}
+                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
         df_typing = {k:v for k,v in df_typing.items() if k in pairdata}
         pairdata = pairdata.astype(dtype=df_typing)
         pairdata = pairdata.reset_index(drop=True)

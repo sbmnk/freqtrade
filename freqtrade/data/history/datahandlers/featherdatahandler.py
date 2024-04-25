@@ -31,6 +31,7 @@ class FeatherDataHandler(IDataHandler):
         filename = self._pair_data_filename(self._datadir, pair, timeframe, candle_type)
         self.create_dir_if_needed(filename)
         column_set = self.get_column_set(candle_type)
+        print(data.columns)
         data.reset_index(drop=True).loc[:, column_set].to_feather(
             filename, compression_level=9, compression='lz4')
     def get_column_set(self,candle_type: CandleType):
@@ -70,7 +71,7 @@ class FeatherDataHandler(IDataHandler):
         pairdata.columns = column_set
         
         df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_quote_volume': 'float'}
+                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
         df_typing = {k:v for k,v in df_typing.items() if k in pairdata}
         pairdata = pairdata.astype(dtype=df_typing)
         pairdata['date'] = to_datetime(pairdata['date'], unit='ms', utc=True)

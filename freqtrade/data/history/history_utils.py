@@ -248,9 +248,11 @@ def _download_pair_history(pair: str, *,
                                                candle_type=candle_type,
                                                until_ms=until_ms if until_ms else None
                                                )
+        print("newdata",new_data[:3])
         # TODO: Maybe move parsing to exchange class (?)
         new_dataframe = ohlcv_to_dataframe(new_data, timeframe, pair, candle_type,
                                            fill_missing=False, drop_incomplete=True)
+        print("newdf",new_dataframe.columns)
         if data.empty:
             data = new_dataframe
         else:
