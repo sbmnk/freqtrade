@@ -277,7 +277,7 @@ class Exchange:
         except (KeyError, AttributeError) as e:
             logger.info(f"No overrides for {name} found")
         except ccxt.BaseError as e:
-            logger.errorn(f"Initialization of overriden ccxt failed. Reason: {e}")
+            logger.error(f"Initialization of overriden ccxt failed. Reason: {e}")
         if not ccxt_overriden:
             try:
                 api = getattr(ccxt_module, name.lower())(ex_config)
