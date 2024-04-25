@@ -31,7 +31,6 @@ class FeatherDataHandler(IDataHandler):
         filename = self._pair_data_filename(self._datadir, pair, timeframe, candle_type)
         self.create_dir_if_needed(filename)
         column_set = self.get_column_set(candle_type)
-        print(data.columns)
         data.reset_index(drop=True).loc[:, column_set].to_feather(
             filename, compression_level=9, compression='lz4')
     def get_column_set(self,candle_type: CandleType):
