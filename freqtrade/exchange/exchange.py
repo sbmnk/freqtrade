@@ -46,8 +46,7 @@ from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.util import dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize, dt_ts
 from freqtrade.util.periodic_cache import PeriodicCache
-
-
+from freqtrade.exchange import ccxt_overrides 
 logger = logging.getLogger(__name__)
 
 
@@ -264,13 +263,28 @@ class Exchange:
             ccxt_kwargs = deep_merge_dicts(self._ccxt_params, ccxt_kwargs)
         if ccxt_kwargs:
             ex_config.update(ccxt_kwargs)
+        ccxt_overriden = False
+        override_prefix = "Override"
+        if ccxt_module==ccxt_async:
+            override_prefix+="Async"
+        # First try to initialise overriden ccxt api if exists
         try:
+            override_module_name = name.lower().title()+override_prefix
+            api = getattr(ccxt_overrides,override_module_name)(ex_config)
+            ccxt_overriden = True
+            logger.info(f"Successfully overriden ccxt with {override_module_name}")
 
-            api = getattr(ccxt_module, name.lower())(ex_config)
         except (KeyError, AttributeError) as e:
-            raise OperationalException(f'Exchange {name} is not supported') from e
+            logger.info(f"No overrides for {name} found")
         except ccxt.BaseError as e:
-            raise OperationalException(f"Initialization of ccxt failed. Reason: {e}") from e
+            logger.errorn(f"Initialization of overriden ccxt failed. Reason: {e}")
+        if not ccxt_overriden:
+            try:
+                api = getattr(ccxt_module, name.lower())(ex_config)
+            except (KeyError, AttributeError) as e:
+                raise OperationalException(f"Exchange {name} is not supported") from e
+            except ccxt.BaseError as e:
+                raise OperationalException(f"Initialization of ccxt failed. Reason: {e}") from e
 
         return api
 
@@ -2105,7 +2119,7 @@ class Exchange:
             idx = -2 if drop_incomplete and len(ticks) > 1 else -1
             self._pairs_last_refresh_time[(pair, timeframe, c_type)] = ticks[idx][0] // 1000
         # keeping parsed dataframe in cache
-        ohlcv_df = ohlcv_to_dataframe(ticks, timeframe, pair=pair, fill_missing=True,
+        ohlcv_df = ohlcv_to_dataframe(ticks, timeframe, pair=pair, c_type=c_type, fill_missing=True,
                                       drop_incomplete=drop_incomplete)
         if cache:
             if (pair, timeframe, c_type) in self._klines:

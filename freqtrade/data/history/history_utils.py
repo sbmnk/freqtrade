@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Tuple
 
 from pandas import DataFrame, concat
 
-from freqtrade.configuration import TimeRange
-from freqtrade.constants import (DATETIME_PRINT_FORMAT, DEFAULT_DATAFRAME_COLUMNS,
+from freqtrade.configuration import TimeRange, Configuration
+from freqtrade.constants import (DATETIME_PRINT_FORMAT,
                                  DL_DATA_TIMEFRAMES, DOCS_LINK, Config)
 from freqtrade.data.converter import (clean_ohlcv_dataframe, convert_trades_to_ohlcv,
                                       ohlcv_to_dataframe, trades_df_remove_duplicates,
@@ -176,7 +176,7 @@ def _load_cached_data_for_updating(
     if not data.empty:
         if not prepend and start and start < data.iloc[0]['date']:
             # Earlier data than existing data requested, redownload all
-            data = DataFrame(columns=DEFAULT_DATAFRAME_COLUMNS)
+            data = DataFrame(columns=Configuration.get_static_config()["dataframe_columns"])
         else:
             if prepend:
                 end = data.iloc[0]['date']
@@ -249,7 +249,7 @@ def _download_pair_history(pair: str, *,
                                                until_ms=until_ms if until_ms else None
                                                )
         # TODO: Maybe move parsing to exchange class (?)
-        new_dataframe = ohlcv_to_dataframe(new_data, timeframe, pair,
+        new_dataframe = ohlcv_to_dataframe(new_data, timeframe, pair, candle_type,
                                            fill_missing=False, drop_incomplete=True)
         if data.empty:
             data = new_dataframe

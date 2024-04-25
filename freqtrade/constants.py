@@ -47,6 +47,7 @@ DRY_RUN_WALLET = 1000
 DATETIME_PRINT_FORMAT = '%Y-%m-%d %H:%M:%S'
 MATH_CLOSE_PREC = 1e-14  # Precision used for float comparisons
 DEFAULT_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
+# DEFAULT_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume', 'number_of_trades', 'taker_buy_quote_volume']
 # Don't modify sequence of DEFAULT_TRADES_COLUMNS
 # it has wide consequences for stored trades files
 DEFAULT_TRADES_COLUMNS = ['timestamp', 'id', 'type', 'side', 'price', 'amount', 'cost']
@@ -152,6 +153,13 @@ CONF_SCHEMA = {
             'type': 'number', 'minimum': 0.0, 'maximum': 1.0, 'default': 0.5
         },
         'fiat_display_currency': {'type': 'string', 'enum': SUPPORTED_FIAT},
+        'dataframe_columns':{
+            'type': 'array',
+            'items': {
+                'type': 'string',
+                },
+            'uniqueItems': True,
+            'default':DEFAULT_DATAFRAME_COLUMNS},
         'dry_run': {'type': 'boolean'},
         'dry_run_wallet': {'type': 'number', 'default': DRY_RUN_WALLET},
         'cancel_open_orders_on_exit': {'type': 'boolean', 'default': False},

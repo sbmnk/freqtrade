@@ -27,7 +27,7 @@ class Configuration:
     Class to read and init the bot configuration
     Reuse this class for the bot, backtesting, hyperopt and every script that required configuration
     """
-
+    _config = None
     def __init__(self, args: Dict[str, Any], runmode: Optional[RunMode] = None) -> None:
         self.args = args
         self.config: Optional[Config] = None
@@ -40,9 +40,13 @@ class Configuration:
         """
         if self.config is None:
             self.config = self.load_config()
-
+            Configuration._config = self.config
         return self.config
-
+    @staticmethod
+    def get_static_config():
+        if Configuration._config is None:
+            raise Exception("Config not initialised")
+        return Configuration._config
     @staticmethod
     def from_files(files: List[str]) -> Dict[str, Any]:
         """

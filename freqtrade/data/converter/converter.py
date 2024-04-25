@@ -10,12 +10,12 @@ from pandas import DataFrame, to_datetime
 
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS, Config
 from freqtrade.enums import CandleType, TradingMode
-
+from freqtrade.configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
 
-def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, *,
+def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, candle_type: CandleType, *,
                        fill_missing: bool = True, drop_incomplete: bool = True) -> DataFrame:
     """
     Converts a list with candle (OHLCV) data (in format returned by ccxt.fetch_ohlcv)
@@ -29,7 +29,10 @@ def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, *,
     :return: DataFrame
     """
     logger.debug(f"Converting candle (OHLCV) data to dataframe for pair {pair}.")
-    cols = DEFAULT_DATAFRAME_COLUMNS
+    if candle_type!=CandleType.FUNDING_RATE:
+        cols = Configuration.get_static_config()["dataframe_columns"]
+    else:
+        cols = DEFAULT_DATAFRAME_COLUMNS
     df = DataFrame(ohlcv, columns=cols)
 
     df['date'] = to_datetime(df['date'], unit='ms', utc=True)
@@ -37,8 +40,10 @@ def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, *,
     # Some exchanges return int values for Volume and even for OHLC.
     # Convert them since TA-LIB indicators used in the strategy assume floats
     # and fail with exception...
-    df = df.astype(dtype={'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                          'volume': 'float'})
+    df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
+                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_quote_volume': 'float'}
+    df_typing = {k:v for k,v in df_typing.items() if k in df}
+    df = df.astype(dtype=df_typing)
     return clean_ohlcv_dataframe(df, timeframe, pair,
                                  fill_missing=fill_missing,
                                  drop_incomplete=drop_incomplete)
@@ -60,13 +65,18 @@ def clean_ohlcv_dataframe(data: DataFrame, timeframe: str, pair: str, *,
     :return: DataFrame
     """
     # group by index and aggregate results to eliminate duplicate ticks
-    data = data.groupby(by='date', as_index=False, sort=True).agg({
+    grouping_rules = {
         'open': 'first',
         'high': 'max',
         'low': 'min',
         'close': 'last',
         'volume': 'max',
-    })
+        'quote_asset_volume':'max',
+        'number_of_trades':'max',
+        'taker_buy_quote_volume':'max'
+    }
+    applicable_grouping_rules = {k:v for k,v in grouping_rules.items() if k in data}
+    data = data.groupby(by='date', as_index=False, sort=True).agg(applicable_grouping_rules)
     # eliminate partial candle
     if drop_incomplete:
         data.drop(data.tail(1).index, inplace=True)
@@ -86,16 +96,20 @@ def ohlcv_fill_up_missing_data(dataframe: DataFrame, timeframe: str, pair: str) 
     """
     from freqtrade.exchange import timeframe_to_resample_freq
 
-    ohlcv_dict = {
+    resampling_data_rules = {
         'open': 'first',
         'high': 'max',
         'low': 'min',
         'close': 'last',
-        'volume': 'sum'
+        'volume': 'sum',
+        'quote_asset_volume':'sum',
+        'number_of_trades':'sum',
+        'taker_buy_quote_volume':'sum'
     }
+    resampling_data_rules = {k:v for k,v in fill_missing_data_rules.items() if k in dataframe}
     resample_interval = timeframe_to_resample_freq(timeframe)
     # Resample to create "NAN" values
-    df = dataframe.resample(resample_interval, on='date').agg(ohlcv_dict)
+    df = dataframe.resample(resample_interval, on='date').agg(resampling_data_rules)
 
     # Forwardfill close for missing columns
     df['close'] = df['close'].ffill()

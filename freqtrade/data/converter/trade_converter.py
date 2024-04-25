@@ -13,7 +13,7 @@ from freqtrade.constants import (DEFAULT_DATAFRAME_COLUMNS, DEFAULT_TRADES_COLUM
                                  Config, TradeList)
 from freqtrade.enums import CandleType, TradingMode
 from freqtrade.exceptions import OperationalException
-
+from freqtrade.configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,8 @@ def trades_to_ohlcv(trades: DataFrame, timeframe: str) -> DataFrame:
     df_new['date'] = df_new.index
     # Drop 0 volume rows
     df_new = df_new.dropna()
-    return df_new.loc[:, DEFAULT_DATAFRAME_COLUMNS]
+    df_cols = Configuration.get_static_config()["dataframe_columns"]
+    return df_new.loc[:, df_cols]
 
 
 def convert_trades_to_ohlcv(

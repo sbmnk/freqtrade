@@ -3,7 +3,7 @@ from typing import Optional
 
 from pandas import DataFrame, read_feather, to_datetime
 
-from freqtrade.configuration import TimeRange
+from freqtrade.configuration import TimeRange, Configuration
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS, DEFAULT_TRADES_COLUMNS
 from freqtrade.enums import CandleType, TradingMode
 
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 class FeatherDataHandler(IDataHandler):
 
-    _columns = DEFAULT_DATAFRAME_COLUMNS
 
     def ohlcv_store(
             self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType) -> None:
@@ -31,10 +30,18 @@ class FeatherDataHandler(IDataHandler):
         """
         filename = self._pair_data_filename(self._datadir, pair, timeframe, candle_type)
         self.create_dir_if_needed(filename)
-
-        data.reset_index(drop=True).loc[:, self._columns].to_feather(
+        column_set = self.get_column_set(candle_type)
+        data.reset_index(drop=True).loc[:, column_set].to_feather(
             filename, compression_level=9, compression='lz4')
-
+    def get_column_set(self,candle_type: CandleType):
+        try:
+            if candle_type!=CandleType.FUNDING_RATE:
+                column_set = Configuration.get_static_config()["dataframe_columns"]
+            else:
+                column_set = DEFAULT_DATAFRAME_COLUMNS
+        except:
+            column_set = DEFAULT_DATAFRAME_COLUMNS
+        return column_set
     def _ohlcv_load(self, pair: str, timeframe: str,
                     timerange: Optional[TimeRange], candle_type: CandleType
                     ) -> DataFrame:
@@ -52,17 +59,20 @@ class FeatherDataHandler(IDataHandler):
         """
         filename = self._pair_data_filename(
             self._datadir, pair, timeframe, candle_type=candle_type)
+        column_set = self.get_column_set(candle_type)
         if not filename.exists():
             # Fallback mode for 1M files
             filename = self._pair_data_filename(
                 self._datadir, pair, timeframe, candle_type=candle_type, no_timeframe_modify=True)
             if not filename.exists():
-                return DataFrame(columns=self._columns)
-
+                return DataFrame(columns=column_set)
         pairdata = read_feather(filename)
-        pairdata.columns = self._columns
-        pairdata = pairdata.astype(dtype={'open': 'float', 'high': 'float',
-                                          'low': 'float', 'close': 'float', 'volume': 'float'})
+        pairdata.columns = column_set
+        
+        df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
+                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_quote_volume': 'float'}
+        df_typing = {k:v for k,v in df_typing.items() if k in pairdata}
+        pairdata = pairdata.astype(dtype=df_typing)
         pairdata['date'] = to_datetime(pairdata['date'], unit='ms', utc=True)
         return pairdata
 
@@ -115,7 +125,9 @@ class FeatherDataHandler(IDataHandler):
         :return: Dataframe containing trades
         """
         filename = self._pair_trades_filename(self._datadir, pair, trading_mode)
+        print("TRADES_LOAD")
         if not filename.exists():
+            print("NOT FILENAME EXISTS")
             return DataFrame(columns=DEFAULT_TRADES_COLUMNS)
 
         tradesdata = read_feather(filename)

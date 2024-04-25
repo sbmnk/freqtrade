@@ -5,7 +5,7 @@ import numpy as np
 from pandas import DataFrame, read_json, to_datetime
 
 from freqtrade import misc
-from freqtrade.configuration import TimeRange
+from freqtrade.configuration import TimeRange, Configuration
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS, DEFAULT_TRADES_COLUMNS
 from freqtrade.data.converter import trades_dict_to_list, trades_list_to_df
 from freqtrade.enums import CandleType, TradingMode
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class JsonDataHandler(IDataHandler):
 
     _use_zip = False
-    _columns = DEFAULT_DATAFRAME_COLUMNS
 
     def ohlcv_store(
             self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType) -> None:
@@ -38,12 +37,21 @@ class JsonDataHandler(IDataHandler):
         _data = data.copy()
         # Convert date to int
         _data['date'] = _data['date'].astype(np.int64) // 1000 // 1000
-
+        column_set = self.get_column_set(candle_type)
         # Reset index, select only appropriate columns and save as json
-        _data.reset_index(drop=True).loc[:, self._columns].to_json(
+        _data.reset_index(drop=True).loc[:, column_set].to_json(
             filename, orient="values",
             compression='gzip' if self._use_zip else None)
-
+    
+    def get_column_set(self,candle_type: CandleType):
+        try:
+            if candle_type!=CandleType.FUNDING_RATE:
+                column_set = Configuration.get_static_config()["dataframe_columns"]
+            else:
+                column_set = DEFAULT_DATAFRAME_COLUMNS
+        except:
+            column_set = DEFAULT_DATAFRAME_COLUMNS
+        return column_set
     def _ohlcv_load(self, pair: str, timeframe: str,
                     timerange: Optional[TimeRange], candle_type: CandleType
                     ) -> DataFrame:
@@ -61,18 +69,19 @@ class JsonDataHandler(IDataHandler):
         """
         filename = self._pair_data_filename(
             self._datadir, pair, timeframe, candle_type=candle_type)
+        column_set = self.get_column_set(candle_type)
         if not filename.exists():
             # Fallback mode for 1M files
             filename = self._pair_data_filename(
                 self._datadir, pair, timeframe, candle_type=candle_type, no_timeframe_modify=True)
             if not filename.exists():
-                return DataFrame(columns=self._columns)
+                return DataFrame(columns=column_set)
         try:
             pairdata = read_json(filename, orient='values')
-            pairdata.columns = self._columns
+            pairdata.columns = column_set
         except ValueError:
             logger.error(f"Could not load data for {pair}.")
-            return DataFrame(columns=self._columns)
+            return DataFrame(columns=column_set)
         pairdata = pairdata.astype(dtype={'open': 'float', 'high': 'float',
                                           'low': 'float', 'close': 'float', 'volume': 'float'})
         pairdata['date'] = to_datetime(pairdata['date'], unit='ms', utc=True)
