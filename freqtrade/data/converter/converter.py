@@ -71,7 +71,7 @@ def clean_ohlcv_dataframe(data: DataFrame, timeframe: str, pair: str, *,
         'low': 'min',
         'close': 'last',
         'volume': 'max',
-        'quote_asset_volume':'max',
+        'quote_volume':'max',
         'number_of_trades':'max',
         'taker_buy_volume':'max'
     }
@@ -102,7 +102,7 @@ def ohlcv_fill_up_missing_data(dataframe: DataFrame, timeframe: str, pair: str) 
         'low': 'min',
         'close': 'last',
         'volume': 'sum',
-        'quote_asset_volume':'sum',
+        'quote_volume':'sum',
         'number_of_trades':'sum',
         'taker_buy_volume':'sum'
     }

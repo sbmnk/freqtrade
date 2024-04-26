@@ -70,7 +70,7 @@ class FeatherDataHandler(IDataHandler):
         pairdata.columns = column_set
         
         df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                          'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
+                          'volume': 'float', 'quote_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
         df_typing = {k:v for k,v in df_typing.items() if k in pairdata}
         pairdata = pairdata.astype(dtype=df_typing)
         pairdata['date'] = to_datetime(pairdata['date'], unit='ms', utc=True)

@@ -57,12 +57,14 @@ class BinanceOverrideAsync(async_binance):
         #
         inverse = self.safe_bool(market, 'inverse')
         volumeIndex = 7 if inverse else 5
+        quoteVolumeIndex = 5 if inverse else 7
         configured_df_cols = Configuration.get_static_config()["dataframe_columns"]
         number_columns_to_index = {"open":1,
                                 "high":2,
                                 "low":3,
                                 "close":4,
                                 "volume":volumeIndex,
+                                "quote_volume":quoteVolumeIndex,
                                 "number_of_trades":8,
                                 "taker_buy_volume":10
                                 }
@@ -72,12 +74,14 @@ class BinanceOverride(ccxt_binance):
     def parse_ohlcv(self, ohlcv, market=None):
         inverse = self.safe_bool(market, 'inverse')
         volumeIndex = 7 if inverse else 5
+        quoteVolumeIndex = 5 if inverse else 7
         configured_df_cols = Configuration.get_static_config()["dataframe_columns"]
         number_columns_to_index = {"open":1,
                                 "high":2,
                                 "low":3,
                                 "close":4,
                                 "volume":volumeIndex,
+                                "quote_volume":quoteVolumeIndex,
                                 "number_of_trades":8,
                                 "taker_buy_volume":10
                                 }
