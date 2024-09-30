@@ -689,7 +689,7 @@ class Exchange:
             (candle_count / candle_limit) + (0 if candle_count % candle_limit == 0 else 1))
         if self._ft_has['ohlcv_has_history']:
 
-            if required_candle_call_count > 5:
+            if required_candle_call_count > 25:
                 # Only allow 5 calls per pair to somewhat limit the impact
                 raise ConfigurationError(
                     f"This strategy requires {startup_candles} candles to start, "
