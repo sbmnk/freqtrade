@@ -695,7 +695,7 @@ class Exchange:
                     f"This strategy requires {startup_candles} candles to start, "
                     "which is more than 5x "
                     f"the amount of candles {self.name} provides for {timeframe}.")
-        elif required_candle_call_count > 1:
+        elif required_candle_call_count > 100:
             raise ConfigurationError(
                 f"This strategy requires {startup_candles} candles to start, which is more than "
                 f"the amount of candles {self.name} provides for {timeframe}.")
