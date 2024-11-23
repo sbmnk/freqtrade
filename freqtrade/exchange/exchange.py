@@ -387,7 +387,6 @@ class Exchange:
             override_prefix+="Async"
         # First try to initialise overriden ccxt api if exists
         try:
-<<<<<<< HEAD
             override_module_name = name.lower().title()+override_prefix
             api = getattr(ccxt_overrides,override_module_name)(ex_config)
             ccxt_overriden = True
@@ -395,11 +394,6 @@ class Exchange:
 
         except (KeyError, AttributeError) as e:
             logger.info(f"No overrides for {name} found")
-=======
-            api = getattr(ccxt_module, name.lower())(ex_config)
-        except (KeyError, AttributeError) as e:
-            raise OperationalException(f"Exchange {name} is not supported") from e
->>>>>>> upstream/develop
         except ccxt.BaseError as e:
             logger.error(f"Initialization of overriden ccxt failed. Reason: {e}")
         if not ccxt_overriden:
@@ -838,29 +832,16 @@ class Exchange:
         candle_count = startup_candles + 1
         # Allow 5 calls to the exchange per pair
         required_candle_call_count = int(
-<<<<<<< HEAD
             (candle_count / candle_limit) + (0 if candle_count % candle_limit == 0 else 1))
         if self._ft_has['ohlcv_has_history']:
 
             if required_candle_call_count > 25:
-=======
-            (candle_count / candle_limit) + (0 if candle_count % candle_limit == 0 else 1)
-        )
-        if self._ft_has["ohlcv_has_history"]:
-            if required_candle_call_count > 5:
->>>>>>> upstream/develop
                 # Only allow 5 calls per pair to somewhat limit the impact
                 raise ConfigurationError(
                     f"This strategy requires {startup_candles} candles to start, "
                     "which is more than 5x "
-<<<<<<< HEAD
                     f"the amount of candles {self.name} provides for {timeframe}.")
         elif required_candle_call_count > 100:
-=======
-                    f"the amount of candles {self.name} provides for {timeframe}."
-                )
-        elif required_candle_call_count > 1:
->>>>>>> upstream/develop
             raise ConfigurationError(
                 f"This strategy requires {startup_candles} candles to start, which is more than "
                 f"the amount of candles {self.name} provides for {timeframe}."
@@ -2463,14 +2444,8 @@ class Exchange:
             idx = -2 if drop_incomplete and len(ticks) > 1 else -1
             self._pairs_last_refresh_time[(pair, timeframe, c_type)] = ticks[idx][0] // 1000
         # keeping parsed dataframe in cache
-<<<<<<< HEAD
         ohlcv_df = ohlcv_to_dataframe(ticks, timeframe, pair=pair, candle_type=c_type, fill_missing=True,
                                       drop_incomplete=drop_incomplete)
-=======
-        ohlcv_df = ohlcv_to_dataframe(
-            ticks, timeframe, pair=pair, fill_missing=True, drop_incomplete=drop_incomplete
-        )
->>>>>>> upstream/develop
         if cache:
             if (pair, timeframe, c_type) in self._klines:
                 old = self._klines[(pair, timeframe, c_type)]
