@@ -30,11 +30,13 @@ The Order-type will be ignored if only one mode is available.
 |----------|-------------|
 | Binance  | limit |
 | Binance Futures  | market, limit |
+| Bingx  | market, limit |
 | HTX (former Huobi)    | limit |
 | kraken   | market, limit |
 | Gate     | limit |
 | Okx      | limit |
 | Kucoin   | stop-limit, stop-market|
+| Hyperliquid (futures only)   | limit |
 
 !!! Note "Tight stoploss"
     <ins>Do not set too low/tight stoploss value when using stop loss on exchange!</ins>  
@@ -158,7 +160,7 @@ You could also have a default stop loss when you are in the red with your buy (b
 For example, your default stop loss is -10%, but once you have more than 0% profit (example 0.1%) a different trailing stoploss will be used.
 
 !!! Note
-    If you want the stoploss to only be changed when you break even of making a profit (what most users want) please refer to next section with [offset enabled](#Trailing-stop-loss-only-once-the-trade-has-reached-a-certain-offset).
+    If you want the stoploss to only be changed when you break even of making a profit (what most users want) please refer to next section with [offset enabled](#trailing-stop-loss-only-once-the-trade-has-reached-a-certain-offset).
 
 Both values require `trailing_stop` to be set to true and `trailing_stop_positive` with a value.
 

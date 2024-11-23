@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import numpy as np
 from pandas import DataFrame, read_json, to_datetime
@@ -17,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class JsonDataHandler(IDataHandler):
-
     _use_zip = False
 
     def ohlcv_store(
-            self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType) -> None:
+        self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType
+    ) -> None:
         """
         Store data in json format "values".
             format looks as follows:
@@ -36,6 +35,7 @@ class JsonDataHandler(IDataHandler):
         self.create_dir_if_needed(filename)
         _data = data.copy()
         # Convert date to int
+<<<<<<< HEAD
         _data['date'] = _data['date'].astype(np.int64) // 1000 // 1000
         column_set = self.get_column_set(candle_type)
         # Reset index, select only appropriate columns and save as json
@@ -55,6 +55,18 @@ class JsonDataHandler(IDataHandler):
     def _ohlcv_load(self, pair: str, timeframe: str,
                     timerange: Optional[TimeRange], candle_type: CandleType
                     ) -> DataFrame:
+=======
+        _data["date"] = _data["date"].astype(np.int64) // 1000 // 1000
+
+        # Reset index, select only appropriate columns and save as json
+        _data.reset_index(drop=True).loc[:, self._columns].to_json(
+            filename, orient="values", compression="gzip" if self._use_zip else None
+        )
+
+    def _ohlcv_load(
+        self, pair: str, timeframe: str, timerange: TimeRange | None, candle_type: CandleType
+    ) -> DataFrame:
+>>>>>>> upstream/develop
         """
         Internal method used to load data for one pair from disk.
         Implements the loading and conversion to a Pandas dataframe.
@@ -67,16 +79,22 @@ class JsonDataHandler(IDataHandler):
         :param candle_type: Any of the enum CandleType (must match trading mode!)
         :return: DataFrame with ohlcv data, or empty DataFrame
         """
+<<<<<<< HEAD
         filename = self._pair_data_filename(
             self._datadir, pair, timeframe, candle_type=candle_type)
         column_set = self.get_column_set(candle_type)
+=======
+        filename = self._pair_data_filename(self._datadir, pair, timeframe, candle_type=candle_type)
+>>>>>>> upstream/develop
         if not filename.exists():
             # Fallback mode for 1M files
             filename = self._pair_data_filename(
-                self._datadir, pair, timeframe, candle_type=candle_type, no_timeframe_modify=True)
+                self._datadir, pair, timeframe, candle_type=candle_type, no_timeframe_modify=True
+            )
             if not filename.exists():
                 return DataFrame(columns=column_set)
         try:
+<<<<<<< HEAD
             pairdata = read_json(filename, orient='values')
             pairdata.columns = column_set
         except ValueError:
@@ -85,14 +103,27 @@ class JsonDataHandler(IDataHandler):
         pairdata = pairdata.astype(dtype={'open': 'float', 'high': 'float',
                                           'low': 'float', 'close': 'float', 'volume': 'float'})
         pairdata['date'] = to_datetime(pairdata['date'], unit='ms', utc=True)
+=======
+            pairdata = read_json(filename, orient="values")
+            pairdata.columns = self._columns
+        except ValueError:
+            logger.error(f"Could not load data for {pair}.")
+            return DataFrame(columns=self._columns)
+        pairdata = pairdata.astype(
+            dtype={
+                "open": "float",
+                "high": "float",
+                "low": "float",
+                "close": "float",
+                "volume": "float",
+            }
+        )
+        pairdata["date"] = to_datetime(pairdata["date"], unit="ms", utc=True)
+>>>>>>> upstream/develop
         return pairdata
 
     def ohlcv_append(
-        self,
-        pair: str,
-        timeframe: str,
-        data: DataFrame,
-        candle_type: CandleType
+        self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType
     ) -> None:
         """
         Append data to existing data structures
@@ -125,7 +156,7 @@ class JsonDataHandler(IDataHandler):
         raise NotImplementedError()
 
     def _trades_load(
-        self, pair: str, trading_mode: TradingMode, timerange: Optional[TimeRange] = None
+        self, pair: str, trading_mode: TradingMode, timerange: TimeRange | None = None
     ) -> DataFrame:
         """
         Load a pair from file, either .json.gz or .json
@@ -154,5 +185,4 @@ class JsonDataHandler(IDataHandler):
 
 
 class JsonGzDataHandler(JsonDataHandler):
-
     _use_zip = True
