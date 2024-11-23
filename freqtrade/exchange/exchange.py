@@ -385,6 +385,8 @@ class Exchange:
         override_prefix = "Override"
         if ccxt_module==ccxt_async:
             override_prefix+="Async"
+        if ccxt_module==ccxt_pro:
+            override_prefix+="Pro"
         # First try to initialise overriden ccxt api if exists
         try:
             override_module_name = name.lower().title()+override_prefix
