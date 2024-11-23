@@ -1,1 +1,1 @@
-from freqtrade.exchange.ccxt_overrides.binance import BinanceOverride, BinanceOverrideAsync
+from freqtrade.exchange.ccxt_overrides.binance import BinanceOverride, BinanceOverrideAsync, BinanceOverridePro
