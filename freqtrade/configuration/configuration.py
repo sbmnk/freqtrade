@@ -16,7 +16,14 @@ from freqtrade.configuration.directory_operations import create_datadir, create_
 from freqtrade.configuration.environment_vars import enironment_vars_to_dict
 from freqtrade.configuration.load_config import load_file, load_from_files
 from freqtrade.constants import Config
-from freqtrade.enums import NON_UTIL_MODES, TRADE_MODES, CandleType, RunMode, TradingMode
+from freqtrade.enums import (
+    NON_UTIL_MODES,
+    TRADE_MODES,
+    CandleType,
+    MarginMode,
+    RunMode,
+    TradingMode,
+)
 from freqtrade.exceptions import OperationalException, ConfigurationError
 from freqtrade.loggers import setup_logging
 from freqtrade.misc import deep_merge_dicts, parse_db_uri_for_logging
