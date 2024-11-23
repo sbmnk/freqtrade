@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class FeatherDataHandler(IDataHandler):
-    _columns = DEFAULT_DATAFRAME_COLUMNS
 
     def ohlcv_store(
         self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType
@@ -68,7 +67,7 @@ class FeatherDataHandler(IDataHandler):
             if not filename.exists():
                 return DataFrame(columns=column_set)
         pairdata = read_feather(filename)
-        pairdata.columns = self._columns
+        pairdata.columns = column_set
         pairdata = pairdata.astype(
             dtype={
                 "open": "float",

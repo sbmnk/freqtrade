@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class HDF5DataHandler(IDataHandler):
-    _columns = DEFAULT_DATAFRAME_COLUMNS
-
     def ohlcv_store(
         self, pair: str, timeframe: str, data: pd.DataFrame, candle_type: CandleType
     ) -> None:
