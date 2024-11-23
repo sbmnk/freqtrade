@@ -5,23 +5,15 @@ from pathlib import Path
 
 from pandas import DataFrame, concat
 
-<<<<<<< HEAD
 from freqtrade.configuration import TimeRange, Configuration
-from freqtrade.constants import (DATETIME_PRINT_FORMAT,
-                                 DL_DATA_TIMEFRAMES, DOCS_LINK, Config)
-from freqtrade.data.converter import (clean_ohlcv_dataframe, convert_trades_to_ohlcv,
-                                      ohlcv_to_dataframe, trades_df_remove_duplicates,
-                                      trades_list_to_df)
-=======
-from freqtrade.configuration import TimeRange
 from freqtrade.constants import DATETIME_PRINT_FORMAT, DL_DATA_TIMEFRAMES, DOCS_LINK, Config
 from freqtrade.data.converter import (
     clean_ohlcv_dataframe,
     convert_trades_to_ohlcv,
     trades_df_remove_duplicates,
     trades_list_to_df,
+    ohlcv_to_dataframe
 )
->>>>>>> upstream/develop
 from freqtrade.data.history.datahandlers import IDataHandler, get_datahandler
 from freqtrade.enums import CandleType, TradingMode
 from freqtrade.exceptions import OperationalException
@@ -202,14 +194,9 @@ def _load_cached_data_for_updating(
         candle_type=candle_type,
     )
     if not data.empty:
-<<<<<<< HEAD
         if not prepend and start and start < data.iloc[0]['date']:
             # Earlier data than existing data requested, redownload all
             data = DataFrame(columns=Configuration.get_static_config()["dataframe_columns"])
-=======
-        if prepend:
-            end = data.iloc[0]["date"]
->>>>>>> upstream/develop
         else:
             if start and start < data.iloc[0]["date"]:
                 # Earlier data than existing data requested, Update start date
@@ -287,7 +274,6 @@ def _download_pair_history(
         )
 
         # Default since_ms to 30 days if nothing is given
-<<<<<<< HEAD
         new_data = exchange.get_historic_ohlcv(pair=pair,
                                                timeframe=timeframe,
                                                since_ms=since_ms if since_ms else
@@ -300,20 +286,6 @@ def _download_pair_history(
         # TODO: Maybe move parsing to exchange class (?)
         new_dataframe = ohlcv_to_dataframe(new_data, timeframe, pair, candle_type,
                                            fill_missing=False, drop_incomplete=True)
-=======
-        new_dataframe = exchange.get_historic_ohlcv(
-            pair=pair,
-            timeframe=timeframe,
-            since_ms=(
-                since_ms
-                if since_ms
-                else int((datetime.now() - timedelta(days=new_pairs_days)).timestamp()) * 1000
-            ),
-            is_new_pair=data.empty,
-            candle_type=candle_type,
-            until_ms=until_ms if until_ms else None,
-        )
->>>>>>> upstream/develop
         if data.empty:
             data = new_dataframe
         else:
