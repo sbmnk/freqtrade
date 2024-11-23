@@ -52,7 +52,7 @@ class JsonDataHandler(IDataHandler):
             column_set = DEFAULT_DATAFRAME_COLUMNS
         return column_set
     def _ohlcv_load(self, pair: str, timeframe: str,
-                    timerange: Optional[TimeRange], candle_type: CandleType
+                    timerange: TimeRange, candle_type: CandleType
                     ) -> DataFrame:
         """
         Internal method used to load data for one pair from disk.
