@@ -30,7 +30,7 @@ class Configuration:
     Reuse this class for the bot, backtesting, hyperopt and every script that required configuration
     """
     _config = None
-    def __init__(self, args: Dict[str, Any], runmode: Optional[RunMode] = None) -> None:
+    def __init__(self, args: dict[str, Any], runmode: RunMode | None = None) -> None:
         self.args = args
         self.config: Config | None = None
         self.runmode = runmode
