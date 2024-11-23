@@ -110,6 +110,7 @@ from freqtrade.util import dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize_delta, dt_ts, format_ms_time
 from freqtrade.util.periodic_cache import PeriodicCache
 from freqtrade.exchange import ccxt_overrides 
+import ccxt.async_support as ccxt_async
 logger = logging.getLogger(__name__)
 
 
@@ -353,7 +354,6 @@ class Exchange:
             ccxt_module = ccxt_pro
             if not is_exchange_known_ccxt(name, ccxt_module):
                 # Fall back to async if pro doesn't support this exchange
-                import ccxt.async_support as ccxt_async
 
                 ccxt_module = ccxt_async
 
