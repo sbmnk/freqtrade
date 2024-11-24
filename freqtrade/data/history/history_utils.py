@@ -274,18 +274,18 @@ def _download_pair_history(
         )
 
         # Default since_ms to 30 days if nothing is given
-        new_data = exchange.get_historic_ohlcv(pair=pair,
-                                               timeframe=timeframe,
-                                               since_ms=since_ms if since_ms else
-                                               int((datetime.now() - timedelta(days=new_pairs_days)
-                                                    ).timestamp()) * 1000,
-                                               is_new_pair=data.empty,
-                                               candle_type=candle_type,
-                                               until_ms=until_ms if until_ms else None
-                                               )
-        # TODO: Maybe move parsing to exchange class (?)
-        new_dataframe = ohlcv_to_dataframe(new_data, timeframe, pair, candle_type,
-                                           fill_missing=False, drop_incomplete=True)
+        new_dataframe = exchange.get_historic_ohlcv(
+            pair=pair,
+            timeframe=timeframe,
+            since_ms=(
+                since_ms
+                if since_ms
+                else int((datetime.now() - timedelta(days=new_pairs_days)).timestamp()) * 1000
+            ),
+            is_new_pair=data.empty,
+            candle_type=candle_type,
+            until_ms=until_ms if until_ms else None,
+        )
         if data.empty:
             data = new_dataframe
         else:

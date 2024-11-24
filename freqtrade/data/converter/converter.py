@@ -15,8 +15,14 @@ from freqtrade.configuration import Configuration
 logger = logging.getLogger(__name__)
 
 
-def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, candle_type: CandleType, *,
-                       fill_missing: bool = True, drop_incomplete: bool = True) -> DataFrame:
+def ohlcv_to_dataframe(
+    ohlcv: list,
+    timeframe: str,
+    pair: str,
+    *,
+    fill_missing: bool = True,
+    drop_incomplete: bool = True,
+) -> DataFrame:
     """
     Converts a list with candle (OHLCV) data (in format returned by ccxt.fetch_ohlcv)
     to a Dataframe
@@ -29,11 +35,12 @@ def ohlcv_to_dataframe(ohlcv: list, timeframe: str, pair: str, candle_type: Cand
     :return: DataFrame
     """
     logger.debug(f"Converting candle (OHLCV) data to dataframe for pair {pair}.")
-    if candle_type!=CandleType.FUNDING_RATE:
+    try:
         cols = Configuration.get_static_config()["dataframe_columns"]
-    else:
+        df = DataFrame(ohlcv, columns=cols)
+    except:
         cols = DEFAULT_DATAFRAME_COLUMNS
-    df = DataFrame(ohlcv, columns=cols)
+        df = DataFrame(ohlcv, columns=cols)
 
     df["date"] = to_datetime(df["date"], unit="ms", utc=True)
 
