@@ -42,7 +42,8 @@ from freqtrade.wallets import Wallets
 
 
 logger = logging.getLogger(__name__)
-import concurrent.futures
+import multiprocess as mp
+
 
 
 class IStrategy(ABC, HyperStrategyMixin):
@@ -1583,14 +1584,10 @@ class IStrategy(ABC, HyperStrategyMixin):
         using only one strategy.
         """
         print("v2 multi")
-        results = {}
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            futures = {executor.submit(process_pair, self, pair_data, pair): pair for pair, pair_data in data.items()}
-            for future in concurrent.futures.as_completed(futures):
-                pair, result = future.result()
-                results[pair] = result
+        with mp.Pool() as pool:
+            results = pool.starmap(process_pair, [(self, pair_data, pair) for pair, pair_data in data.items()])
 
-        return results
+        return dict(results)
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
