@@ -1596,9 +1596,11 @@ class IStrategy(ABC, HyperStrategyMixin):
             for pair, pair_data in data.items()
         }
         workload_args = [pair_data[1] for pair_data in workloads.values()]
+        print(workload_args)
         calculation_task = workloads[list(workloads.keys())[0]][0]
         with mp.Pool() as pool:
             results = pool.starmap(calculation_task, workload_args)
+        print(results)
         return dict(results)
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
