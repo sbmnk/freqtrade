@@ -1580,6 +1580,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
+        print("TESTQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
         logger.info("Using multiprocessing to calculate indicators.")
         import concurrent.futures
         calculated_indicators = {}
