@@ -1580,6 +1580,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
+        logger.info("Using multiprocessing to calculate indicators.")
         import concurrent.futures
         calculated_indicators = {}
         def process_pair(pair_data, pair):
@@ -1590,6 +1591,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             for future in concurrent.futures.as_completed(futures):
                 pair, result = future.result()
                 calculated_indicators[pair] = result
+        logger.info("Finished multiprocessing to calculate indicators.")
         return calculated_indicators
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
