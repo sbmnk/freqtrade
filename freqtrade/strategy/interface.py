@@ -43,8 +43,6 @@ from freqtrade.wallets import Wallets
 
 logger = logging.getLogger(__name__)
 import multiprocess as mp
-import dill
-dill.settings['recurse'] = True
 
 
 class IStrategy(ABC, HyperStrategyMixin):
@@ -225,6 +223,15 @@ class IStrategy(ABC, HyperStrategyMixin):
 
     @abstractmethod
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        """
+        Populate indicators that will be used in the Buy, Sell, Short, Exit_short strategy
+        :param dataframe: DataFrame with data from the exchange
+        :param metadata: Additional information, like the currently traded pair
+        :return: a Dataframe with all mandatory indicators for the strategies
+        """
+        return dataframe
+    @abstractmethod
+    def produce_calculation_workload(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
         Populate indicators that will be used in the Buy, Sell, Short, Exit_short strategy
         :param dataframe: DataFrame with data from the exchange
@@ -1573,7 +1580,6 @@ class IStrategy(ABC, HyperStrategyMixin):
             pair=trade.pair, trade=trade, order=order, current_time=current_time
         )
 
-
     def advise_all_indicators(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """
         Populates indicators for given candle (OHLCV) data (for multiple pairs)
@@ -1584,10 +1590,15 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
-        print("v2 multi")
-        with mp.Pool() as pool:
-            results = pool.starmap(process_pair, [(self, pair_data, pair) for pair, pair_data in data.items()])
 
+        workloads = {
+            pair: self.advise_indicators(pair_data.copy(), {"pair": pair}, True).copy()
+            for pair, pair_data in data.items()
+        }
+        workload_args = [pair_data[1] for pair_data in workloads.values()]
+        calculation_task = workloads[list(workloads.keys())[0]][0]
+        with mp.Pool() as pool:
+            results = pool.starmap(calculation_task, workload_args)
         return dict(results)
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -1627,7 +1638,7 @@ class IStrategy(ABC, HyperStrategyMixin):
 
             logger.debug("Populated dataframe with trades.")
 
-    def advise_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+    def advise_indicators(self, dataframe: DataFrame, metadata: dict, generate_workload=False) -> DataFrame:
         """
         Populate indicators that will be used in the Buy, Sell, short, exit_short strategy
         This method should not be overridden.
@@ -1644,7 +1655,9 @@ class IStrategy(ABC, HyperStrategyMixin):
             )
 
         self._if_enabled_populate_trades(dataframe, metadata)
-        return self.populate_indicators(dataframe, metadata)
+        if not generate_workload:
+            return self.populate_indicators(dataframe, metadata)
+        return self.produce_calculation_workload(dataframe, metadata)
 
     def advise_entry(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -1681,5 +1694,4 @@ class IStrategy(ABC, HyperStrategyMixin):
         if "exit_long" not in df.columns:
             df = df.rename({"sell": "exit_long"}, axis="columns")
         return df
-def process_pair(strategy_instance, pair_data, pair):
-    return pair, strategy_instance.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
+    
