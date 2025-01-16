@@ -42,6 +42,7 @@ from freqtrade.wallets import Wallets
 
 
 logger = logging.getLogger(__name__)
+import concurrent.futures
 
 
 class IStrategy(ABC, HyperStrategyMixin):
@@ -1570,6 +1571,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             pair=trade.pair, trade=trade, order=order, current_time=current_time
         )
 
+
     def advise_all_indicators(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """
         Populates indicators for given candle (OHLCV) data (for multiple pairs)
@@ -1580,20 +1582,15 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
-        print("TESTQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
-        logger.info("Using multiprocessing to calculate indicators.")
-        import concurrent.futures
-        calculated_indicators = {}
-        def process_pair(pair_data, pair):
-            return pair, self.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
-
-        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-            futures = {executor.submit(process_pair, pair_data, pair): pair for pair, pair_data in data.items()}
+        print("v2 multi")
+        results = {}
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = {executor.submit(process_pair, self, pair_data, pair): pair for pair, pair_data in data.items()}
             for future in concurrent.futures.as_completed(futures):
                 pair, result = future.result()
-                calculated_indicators[pair] = result
-        logger.info("Finished multiprocessing to calculate indicators.")
-        return calculated_indicators
+                results[pair] = result
+
+        return results
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -1686,3 +1683,5 @@ class IStrategy(ABC, HyperStrategyMixin):
         if "exit_long" not in df.columns:
             df = df.rename({"sell": "exit_long"}, axis="columns")
         return df
+def process_pair(strategy_instance, pair_data, pair):
+    return pair, strategy_instance.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
