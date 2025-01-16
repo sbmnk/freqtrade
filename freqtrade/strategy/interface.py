@@ -1580,10 +1580,17 @@ class IStrategy(ABC, HyperStrategyMixin):
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
-        return {
-            pair: self.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
-            for pair, pair_data in data.items()
-        }
+        import concurrent.futures
+        calculated_indicators = {}
+        def process_pair(pair_data, pair):
+            return pair, self.advise_indicators(pair_data.copy(), {"pair": pair}).copy()
+
+        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(process_pair, pair_data, pair): pair for pair, pair_data in data.items()}
+            for future in concurrent.futures.as_completed(futures):
+                pair, result = future.result()
+                calculated_indicators[pair] = result
+        return calculated_indicators
 
     def ft_advise_signals(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
