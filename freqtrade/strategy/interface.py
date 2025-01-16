@@ -43,7 +43,8 @@ from freqtrade.wallets import Wallets
 
 logger = logging.getLogger(__name__)
 import multiprocess as mp
-
+import dill
+dill.settings['recurse'] = True
 
 
 class IStrategy(ABC, HyperStrategyMixin):
