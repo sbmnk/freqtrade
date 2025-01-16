@@ -1592,7 +1592,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
 
         workloads = {
-            pair: self.advise_indicators(pair_data.copy(), {"pair": pair}, True).copy()
+            pair: self.advise_indicators(pair_data.copy(), {"pair": pair}, True)
             for pair, pair_data in data.items()
         }
         workload_args = [pair_data[1] for pair_data in workloads.values()]
