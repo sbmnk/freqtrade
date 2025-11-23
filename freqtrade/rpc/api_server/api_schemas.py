@@ -1,11 +1,12 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, RootModel, SerializeAsAny
+from pydantic import AwareDatetime, BaseModel, RootModel, SerializeAsAny, model_validator
 
-from freqtrade.constants import IntOrInf
+from freqtrade.constants import DL_DATA_TIMEFRAMES, IntOrInf
 from freqtrade.enums import MarginMode, OrderTypeValues, SignalDirection, TradingMode
-from freqtrade.ft_types import ValidExchangesType
+from freqtrade.ft_types import AnnotationType, ValidExchangesType
+from freqtrade.rpc.api_server.webserver_bgwork import ProgressTask
 
 
 class ExchangeModePayloadMixin(BaseModel):
@@ -44,6 +45,7 @@ class BackgroundTaskStatus(BaseModel):
     status: str
     running: bool
     progress: float | None = None
+    progress_tasks: dict[str, ProgressTask] | None = None
     error: str | None = None
 
 
@@ -148,6 +150,7 @@ class Profit(BaseModel):
     best_pair: str
     best_rate: float
     best_pair_profit_ratio: float
+    best_pair_profit_abs: float
     winning_trades: int
     losing_trades: int
     profit_factor: float
@@ -160,9 +163,20 @@ class Profit(BaseModel):
     max_drawdown_start_timestamp: int
     max_drawdown_end: str
     max_drawdown_end_timestamp: int
+    current_drawdown: float
+    current_drawdown_abs: float
+    current_drawdown_high: float
+    current_drawdown_start: str
+    current_drawdown_start_timestamp: int
     trading_volume: float | None = None
     bot_start_timestamp: int
     bot_start_date: str
+
+
+class ProfitAll(BaseModel):
+    all: Profit
+    long: Profit | None = None
+    short: Profit | None = None
 
 
 class SellReason(BaseModel):
@@ -215,6 +229,7 @@ class ShowConfig(BaseModel):
     api_version: float
     dry_run: bool
     trading_mode: str
+    margin_mode: str
     short_allowed: bool
     stake_currency: str
     stake_amount: str
@@ -325,6 +340,8 @@ class TradeSchema(BaseModel):
 
     min_rate: float | None = None
     max_rate: float | None = None
+    nr_of_successful_entries: int
+    nr_of_successful_exits: int
     has_open_orders: bool
     orders: list[OrderSchema]
 
@@ -482,6 +499,22 @@ class PairListsPayload(ExchangeModePayloadMixin, BaseModel):
     stake_currency: str
 
 
+class DownloadDataPayload(ExchangeModePayloadMixin, BaseModel):
+    pairs: list[str]
+    timeframes: list[str] | None = DL_DATA_TIMEFRAMES
+    days: int | None = None
+    timerange: str | None = None
+    erase: bool = False
+    download_trades: bool = False
+
+    @model_validator(mode="before")
+    def check_mutually_exclusive(cls, values):
+        timeframes, days = values.get("timerange"), values.get("days")
+        if timeframes and days:
+            raise ValueError("Only one of timeframes or days can be provided, not both.")
+        return values
+
+
 class FreqAIModelListResponse(BaseModel):
     freqaimodels: list[str]
 
@@ -505,10 +538,11 @@ class PairCandlesRequest(BaseModel):
     columns: list[str] | None = None
 
 
-class PairHistoryRequest(PairCandlesRequest):
+class PairHistoryRequest(PairCandlesRequest, ExchangeModePayloadMixin):
     timerange: str
-    strategy: str
+    strategy: str | None = None
     freqaimodel: str | None = None
+    live_mode: bool = False
 
 
 class PairHistory(BaseModel):
@@ -519,6 +553,7 @@ class PairHistory(BaseModel):
     columns: list[str]
     all_columns: list[str] = []
     data: SerializeAsAny[list[Any]]
+    annotations: list[AnnotationType] | None = None
     length: int
     buy_signals: int
     sell_signals: int
@@ -587,6 +622,24 @@ class BacktestMarketChange(BaseModel):
     data: list[list[Any]]
 
 
+class MarketRequest(ExchangeModePayloadMixin, BaseModel):
+    base: str | None = None
+    quote: str | None = None
+
+
+class MarketModel(BaseModel):
+    symbol: str
+    base: str
+    quote: str
+    spot: bool
+    swap: bool
+
+
+class MarketResponse(BaseModel):
+    markets: dict[str, MarketModel]
+    exchange_id: str
+
+
 class SysInfo(BaseModel):
     cpu_pct: list[float]
     ram_pct: float
@@ -599,3 +652,16 @@ class Health(BaseModel):
     bot_start_ts: int | None = None
     bot_startup: datetime | None = None
     bot_startup_ts: int | None = None
+
+
+class CustomDataEntry(BaseModel):
+    key: str
+    type: str
+    value: Any
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class ListCustomData(BaseModel):
+    trade_id: int
+    custom_data: list[CustomDataEntry]

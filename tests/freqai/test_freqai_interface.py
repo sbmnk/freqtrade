@@ -13,11 +13,16 @@ from freqtrade.freqai.utils import download_all_data_for_training, get_required_
 from freqtrade.optimize.backtesting import Backtesting
 from freqtrade.persistence import Trade
 from freqtrade.plugins.pairlistmanager import PairListManager
-from tests.conftest import EXMS, create_mock_trades, get_patched_exchange, log_has_re
-from tests.freqai.conftest import (
-    get_patched_freqai_strategy,
+from tests.conftest import (
+    EXMS,
+    create_mock_trades,
+    get_patched_exchange,
     is_arm,
     is_mac,
+    log_has_re,
+)
+from tests.freqai.conftest import (
+    get_patched_freqai_strategy,
     make_rl_config,
     mock_pytorch_mlp_model_training_parameters,
 )
@@ -138,6 +143,7 @@ def test_extract_data_and_train_model_Standard(
         ("CatboostClassifierMultiTarget", "freqai_test_multimodel_classifier_strat"),
     ],
 )
+@pytest.mark.filterwarnings(r"ignore:.*__sklearn_tags__.*:DeprecationWarning")
 def test_extract_data_and_train_model_MultiTargets(mocker, freqai_conf, model, strat):
     can_run_model(model)
 

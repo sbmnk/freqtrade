@@ -1,6 +1,7 @@
 """Hyperliquid exchange subclass"""
 
 import logging
+from copy import deepcopy
 from datetime import datetime
 
 from freqtrade.constants import BuySell
@@ -21,24 +22,29 @@ class Hyperliquid(Exchange):
 
     _ft_has: FtHas = {
         "ohlcv_has_history": False,
-        "ohlcv_candle_limit": 5000,
         "l2_limit_range": [20],
         "trades_has_history": False,
         "tickers_have_bid_ask": False,
         "stoploss_on_exchange": False,
         "exchange_has_overrides": {"fetchTrades": False},
         "marketOrderRequiresPrice": True,
+        "download_data_parallel_quick": False,
+        "ws_enabled": True,
     }
     _ft_has_futures: FtHas = {
         "stoploss_on_exchange": True,
         "stoploss_order_types": {"limit": "limit"},
+        "stoploss_blocks_assets": False,
         "stop_price_prop": "stopPrice",
         "funding_fee_timeframe": "1h",
         "funding_fee_candle_limit": 500,
+        "uses_leverage_tiers": False,
     }
 
     _supported_trading_mode_margin_pairs: list[tuple[TradingMode, MarginMode]] = [
-        (TradingMode.FUTURES, MarginMode.ISOLATED)
+        (TradingMode.SPOT, MarginMode.NONE),
+        (TradingMode.FUTURES, MarginMode.ISOLATED),
+        (TradingMode.FUTURES, MarginMode.CROSS),
     ]
 
     @property
@@ -94,7 +100,6 @@ class Hyperliquid(Exchange):
                    'SOL/USDC:USDC': 43}}
         """
         # Defining/renaming variables to match the documentation
-        isolated_margin = wallet_balance
         position_size = amount
         price = open_rate
         position_value = price * position_size
@@ -112,8 +117,14 @@ class Hyperliquid(Exchange):
         #       3. Divide this by 2
         maintenance_margin_required = position_value / max_leverage / 2
 
-        # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
-        margin_available = isolated_margin - maintenance_margin_required
+        if self.margin_mode == MarginMode.ISOLATED:
+            # Docs: margin_available (isolated) = isolated_margin - maintenance_margin_required
+            margin_available = stake_amount - maintenance_margin_required
+        elif self.margin_mode == MarginMode.CROSS:
+            # Docs: margin_available (cross) = account_value - maintenance_margin_required
+            margin_available = wallet_balance - maintenance_margin_required
+        else:
+            raise OperationalException("Unsupported margin mode for liquidation price calculation")
 
         # Docs: The maintenance margin is half of the initial margin at max leverage
         # The docs don't explicitly specify maintenance leverage, but this works.
@@ -157,9 +168,15 @@ class Hyperliquid(Exchange):
                 logger.warning(f"Could not update funding fees for {pair}.")
         return 0.0
 
-    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
-        order = super().fetch_order(order_id, pair, params)
-
+    def _adjust_hyperliquid_order(
+        self,
+        order: dict,
+    ) -> dict:
+        """
+        Adjusts order response for Hyperliquid
+        :param order: Order response from Hyperliquid
+        :return: Adjusted order response
+        """
         if (
             order["average"] is None
             and order["status"] in ("canceled", "closed")
@@ -168,7 +185,9 @@ class Hyperliquid(Exchange):
             # Hyperliquid does not fill the average price in the order response
             # Fetch trades to calculate the average price to have the actual price
             # the order was executed at
-            trades = self.get_trades_for_order(order_id, pair, since=dt_from_ts(order["timestamp"]))
+            trades = self.get_trades_for_order(
+                order["id"], order["symbol"], since=dt_from_ts(order["timestamp"])
+            )
 
             if trades:
                 total_amount = sum(t["amount"] for t in trades)
@@ -177,5 +196,23 @@ class Hyperliquid(Exchange):
                     if total_amount
                     else None
                 )
+        return order
+
+    def fetch_order(self, order_id: str, pair: str, params: dict | None = None) -> CcxtOrder:
+        order = super().fetch_order(order_id, pair, params)
+
+        order = self._adjust_hyperliquid_order(order)
+        self._log_exchange_response("fetch_order2", order)
 
         return order
+
+    def fetch_orders(
+        self, pair: str, since: datetime, params: dict | None = None
+    ) -> list[CcxtOrder]:
+        orders = super().fetch_orders(pair, since, params)
+        for idx, order in enumerate(deepcopy(orders)):
+            order2 = self._adjust_hyperliquid_order(order)
+            orders[idx] = order2
+
+        self._log_exchange_response("fetch_orders2", orders)
+        return orders

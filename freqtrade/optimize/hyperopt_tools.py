@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Iterator
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +9,7 @@ import numpy as np
 import rapidjson
 from pandas import isna, json_normalize
 
-from freqtrade.constants import FTHYPT_FILEVERSION, Config
+from freqtrade.constants import FTHYPT_FILEVERSION, HYPEROPT_BUILTIN_SPACES, Config
 from freqtrade.enums import HyperoptState
 from freqtrade.exceptions import OperationalException
 from freqtrade.misc import deep_merge_dicts, round_dict, safe_value_fallback2
@@ -71,7 +71,7 @@ class HyperoptTools:
             "strategy_name": strategy_name,
             "params": final_params,
             "ft_stratparam_v": 1,
-            "export_time": datetime.now(timezone.utc),
+            "export_time": datetime.now(UTC),
         }
         logger.info(f"Dumping parameters to {filename}")
         with filename.open("w") as f:
@@ -107,7 +107,7 @@ class HyperoptTools:
         """
         Tell if the space value is contained in the configuration
         """
-        # 'trailing' and 'protection spaces are not included in the 'default' set of spaces
+        # The following spaces are not included in the 'default' set of spaces
         if space in ("trailing", "protection", "trades"):
             return any(s in config["spaces"] for s in [space, "all"])
         else:
@@ -219,21 +219,22 @@ class HyperoptTools:
             print(rapidjson.dumps(result_dict, default=str, number_mode=HYPER_PARAMS_FILE_FORMAT))
 
         else:
-            HyperoptTools._params_pretty_print(
-                params, "buy", "Buy hyperspace params:", non_optimized
-            )
-            HyperoptTools._params_pretty_print(
-                params, "sell", "Sell hyperspace params:", non_optimized
-            )
-            HyperoptTools._params_pretty_print(
-                params, "protection", "Protection hyperspace params:", non_optimized
-            )
-            HyperoptTools._params_pretty_print(params, "roi", "ROI table:", non_optimized)
-            HyperoptTools._params_pretty_print(params, "stoploss", "Stoploss:", non_optimized)
-            HyperoptTools._params_pretty_print(params, "trailing", "Trailing stop:", non_optimized)
-            HyperoptTools._params_pretty_print(
-                params, "max_open_trades", "Max Open Trades:", non_optimized
-            )
+            all_spaces = list(params.keys() | non_optimized.keys())
+            # Explicitly listed to keep original sort order
+            spaces = ["buy", "sell", "protection", "roi", "stoploss", "trailing", "max_open_trades"]
+            spaces += [s for s in all_spaces if s not in spaces]
+            lookup = {
+                "roi": "ROI",
+                "trailing": "Trailing stop",
+            }
+            for space in spaces:
+                name = lookup.get(
+                    space, space.capitalize() if space in HYPEROPT_BUILTIN_SPACES else space
+                )
+
+                HyperoptTools._params_pretty_print(
+                    params, space, f"{name} parameters:", non_optimized
+                )
 
     @staticmethod
     def _params_update_for_json(result_dict, params, non_optimized, space: str) -> None:
@@ -374,7 +375,6 @@ class HyperoptTools:
 
         trials = json_normalize(results, max_level=1)
         trials["Best"] = ""
-        trials["Stake currency"] = config["stake_currency"]
 
         base_metrics = [
             "Best",
@@ -383,11 +383,13 @@ class HyperoptTools:
             "results_metrics.profit_mean",
             "results_metrics.profit_median",
             "results_metrics.profit_total",
-            "Stake currency",
+            "results_metrics.stake_currency",
             "results_metrics.profit_total_abs",
             "results_metrics.holding_avg",
             "results_metrics.trade_count_long",
             "results_metrics.trade_count_short",
+            "results_metrics.max_drawdown_abs",
+            "results_metrics.max_drawdown_account",
             "loss",
             "is_initial_point",
             "is_best",
@@ -409,6 +411,8 @@ class HyperoptTools:
             "Avg duration",
             "Trade count long",
             "Trade count short",
+            "Max drawdown",
+            "Max drawdown percent",
             "Objective",
             "is_initial_point",
             "is_best",
@@ -430,6 +434,9 @@ class HyperoptTools:
         )
         trials["Profit"] = trials["Profit"].apply(lambda x: f"{x:,.2f}" if not isna(x) else "")
         trials["Avg profit"] = trials["Avg profit"].apply(
+            lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
+        )
+        trials["Max drawdown percent"] = trials["Max drawdown percent"].apply(
             lambda x: f"{x * perc_multi:,.2f}%" if not isna(x) else ""
         )
         trials["Objective"] = trials["Objective"].apply(

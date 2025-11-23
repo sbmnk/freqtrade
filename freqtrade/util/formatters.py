@@ -1,3 +1,7 @@
+from datetime import timedelta
+
+from numpy import isnan
+
 from freqtrade.constants import DECIMAL_PER_COIN_FALLBACK, DECIMALS_PER_COIN
 
 
@@ -27,6 +31,8 @@ def round_value(value: float, decimals: int, keep_trailing_zeros=False) -> str:
     :param keep_trailing_zeros: Keep trailing zeros "222.200" vs. "222.2"
     :return: Rounded value as string
     """
+    if isnan(value):
+        return "N/A"
     val = f"{value:.{decimals}f}"
     if not keep_trailing_zeros:
         val = strip_trailing_zeros(val)
@@ -66,3 +72,27 @@ def fmt_coin2(
         val = f"{val} {coin}"
 
     return val
+
+
+def format_duration(td: timedelta) -> str:
+    """
+    Format a timedelta object to "XXd HH:MM" format
+    :param td: Timedelta object to format
+    :return: Formatted time string
+    """
+    d = td.days
+    h, r = divmod(td.seconds, 3600)
+    m, _ = divmod(r, 60)
+    return f"{d}d {h:02d}:{m:02d}"
+
+
+def format_pct(value: float | None) -> str:
+    """
+    Format a float value as percentage string with 2 decimals
+    None and NaN values are formatted as "N/A"
+    :param value: Float value to format
+    :return: Formatted percentage string
+    """
+    if value is None or isnan(value):
+        return "N/A"
+    return f"{value:.2%}"
