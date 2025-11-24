@@ -281,8 +281,8 @@ async def get_daily_ohlcv(
 
                             df = pd.read_csv(
                                 csvf,
-                                usecols=[0, 1, 2, 3, 4, 5],
-                                names=["date", "open", "high", "low", "close", "volume"],
+                                usecols=[0, 1, 2, 3, 4, 5, 7, 8, 10],
+                                names=["date", "open", "high", "low", "close", "volume", "quote_volume", "number_of_trades", "taker_buy_volume"],
                                 header=header,
                             )
                             df["date"] = pd.to_datetime(
