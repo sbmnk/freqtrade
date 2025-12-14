@@ -1034,8 +1034,7 @@ def test_api_delete_trade(botclient, mocker, fee, markets, is_short):
     stoploss_mock = MagicMock()
     cancel_mock = MagicMock()
     mocker.patch.multiple(
-        EXMS,
-        markets=PropertyMock(return_value=markets),
+        ftbot.exchange,
         cancel_order=cancel_mock,
         cancel_stoploss_order=stoploss_mock,
     )
@@ -2758,12 +2757,12 @@ def test_list_available_pairs(botclient):
     rc = client_get(client, f"{BASE_URI}/available_pairs")
 
     assert_response(rc)
-    assert rc.json()["length"] == 12
+    assert rc.json()["length"] == 14
     assert isinstance(rc.json()["pairs"], list)
 
     rc = client_get(client, f"{BASE_URI}/available_pairs?timeframe=5m")
     assert_response(rc)
-    assert rc.json()["length"] == 12
+    assert rc.json()["length"] == 14
 
     rc = client_get(client, f"{BASE_URI}/available_pairs?stake_currency=ETH")
     assert_response(rc)
