@@ -22,7 +22,7 @@ from freqtrade.exchange.exchange_utils_timeframe import timeframe_to_msecs
 from freqtrade.misc import deep_merge_dicts, json_load
 from freqtrade.util import FtTTLCache
 from freqtrade.util.datetime_helpers import dt_from_ts, dt_ts
-
+from freqtrade.constants import BuySell
 
 logger = logging.getLogger(__name__)
 
@@ -303,7 +303,6 @@ class Binance(Exchange):
 
     def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
         if self.trading_mode != TradingMode.SPOT:
-            logger.info(f"Trying to set margin mode to {self.margin_mode} for {pair} with leverage {leverage}")
             # Binance needs the parameter leverage.
             # Don't use _set_leverage(), as this sets margin back to cross
             self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
