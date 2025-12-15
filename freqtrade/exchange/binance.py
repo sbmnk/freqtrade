@@ -303,6 +303,7 @@ class Binance(Exchange):
 
     def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
         if self.trading_mode != TradingMode.SPOT:
+            logger.info(f"Trying to set margin mode to {self.margin_mode} for {pair} with leverage {leverage}")
             # Binance needs the parameter leverage.
             # Don't use _set_leverage(), as this sets margin back to cross
             self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
