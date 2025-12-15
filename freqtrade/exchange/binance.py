@@ -301,6 +301,12 @@ class Binance(Exchange):
         except ccxt.BaseError as e:
             raise OperationalException(e) from e
 
+    def _lev_prep(self, pair: str, leverage: float, side: BuySell, accept_fail: bool = False):
+        if self.trading_mode != TradingMode.SPOT:
+            # Binance needs the parameter leverage.
+            # Don't use _set_leverage(), as this sets margin back to cross
+            self.set_margin_mode(pair, self.margin_mode, params={"leverage": leverage})
+
     def dry_run_liquidation_price(
         self,
         pair: str,
