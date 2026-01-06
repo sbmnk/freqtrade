@@ -105,7 +105,6 @@ from freqtrade.misc import (
     file_dump_json,
     file_load_json,
     safe_value_fallback,
-    safe_value_fallback2,
 )
 from freqtrade.util import FtTTLCache, PeriodicCache, dt_from_ts, dt_now
 from freqtrade.util.datetime_helpers import dt_humanize_delta, dt_ts, format_ms_time
@@ -133,6 +132,7 @@ class Exchange:
         "stop_price_prop": "stopLossPrice",  # Used for stoploss_on_exchange response parsing
         "stoploss_order_types": {},
         "stoploss_blocks_assets": True,  # By default stoploss orders block assets
+        "stoploss_query_requires_stop_flag": False,  # Require "stop": True" to fetch stop orders
         "order_time_in_force": ["GTC"],
         "ohlcv_params": {},
         "ohlcv_has_history": True,  # Some exchanges (Kraken) don't provide history via ohlcv
@@ -497,7 +497,7 @@ class Exchange:
     def _log_exchange_response(self, endpoint: str, response, *, add_info=None) -> None:
         """Log exchange responses"""
         if self.log_responses:
-            add_info_str = "" if add_info is None else f" {add_info}: "
+            add_info_str = "" if add_info is None else f"{add_info}: "
             logger.info(f"API {endpoint}: {add_info_str}{response}")
 
     def ohlcv_candle_limit(
@@ -726,7 +726,7 @@ class Exchange:
             self._markets = self._api_async.markets
             self._api.set_markets_from_exchange(self._api_async)
             # Assign options array, as it contains some temporary information from the exchange.
-            # TODO: investigate with ccxt if it's safe to remove `.options`
+            # ccxt does not implicitly copy options over in set_markets_from_exchange
             self._api.options = self._api_async.options
             if self._exchange_ws:
                 # Set markets to avoid reloading on websocket api
@@ -896,18 +896,20 @@ class Exchange:
                 # Only allow 5 calls per pair to somewhat limit the impact
                 raise ConfigurationError(
                     f"This strategy requires {startup_candles} candles to start, "
-                    "which is more than 5x "
-                    f"the amount of candles {self.name} provides for {timeframe}.")
-        elif required_candle_call_count > 100:
+                    f"which is more than 5x ({candle_limit * 5 - 1} candles) "
+                    f"the amount of candles {self.name} provides for {timeframe}."
+                )
+        elif required_candle_call_count > 1:
             raise ConfigurationError(
-                f"This strategy requires {startup_candles} candles to start, which is more than "
+                f"This strategy requires {startup_candles} candles to start, "
+                f"which is more than ({candle_limit - 1} candles) "
                 f"the amount of candles {self.name} provides for {timeframe}."
             )
         if required_candle_call_count > 1:
             logger.warning(
                 f"Using {required_candle_call_count} calls to get OHLCV. "
                 f"This can result in slower operations for the bot. Please check "
-                f"if you really need {startup_candles} candles for your strategy"
+                f"if you really need {startup_candles} candles for your strategy."
             )
         return required_candle_call_count
 
@@ -1704,7 +1706,24 @@ class Exchange:
     def fetch_stoploss_order(
         self, order_id: str, pair: str, params: dict | None = None
     ) -> CcxtOrder:
-        return self.fetch_order(order_id, pair, params)
+        if self.get_option("stoploss_query_requires_stop_flag"):
+            params = params or {}
+            params["stop"] = True
+        order = self.fetch_order(order_id, pair, params)
+        val = self.get_option("stoploss_algo_order_info_id")
+        if val and order.get("status", "open") == "closed":
+            if new_orderid := order.get("info", {}).get(val):
+                # Fetch real order, which was placed by the algo order.
+                actual_order = self.fetch_order(order_id=new_orderid, pair=pair, params=None)
+                actual_order["id_stop"] = actual_order["id"]
+                actual_order["id"] = order_id
+                actual_order["type"] = "stoploss"
+                actual_order["stopPrice"] = order.get("stopPrice")
+                actual_order["status_stop"] = "triggered"
+
+                return actual_order
+
+        return order
 
     def fetch_order_or_stoploss_order(
         self, order_id: str, pair: str, stoploss_order: bool = False
@@ -1758,6 +1777,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     def cancel_stoploss_order(self, order_id: str, pair: str, params: dict | None = None) -> dict:
+        if self.get_option("stoploss_query_requires_stop_flag"):
+            params = params or {}
+            params["stop"] = True
         return self.cancel_order(order_id, pair, params)
 
     def is_cancel_order_result_suitable(self, corder) -> TypeGuard[CcxtOrder]:
@@ -1822,16 +1844,16 @@ class Exchange:
         return order
 
     @retrier
-    def get_balances(self) -> CcxtBalances:
+    def get_balances(self, params: dict | None = None) -> CcxtBalances:
         try:
-            balances = self._api.fetch_balance()
+            balances = self._api.fetch_balance(params or {})
             # Remove additional info from ccxt results
             balances.pop("info", None)
             balances.pop("free", None)
             balances.pop("total", None)
             balances.pop("used", None)
 
-            self._log_exchange_response("fetch_balance", balances)
+            self._log_exchange_response("fetch_balance", balances, add_info=params)
             return balances
         except ccxt.DDoSProtection as e:
             raise DDosProtection(e) from e
@@ -1843,7 +1865,9 @@ class Exchange:
             raise OperationalException(e) from e
 
     @retrier
-    def fetch_positions(self, pair: str | None = None) -> list[CcxtPosition]:
+    def fetch_positions(
+        self, pair: str | None = None, params: dict | None = None
+    ) -> list[CcxtPosition]:
         """
         Fetch positions from the exchange.
         If no pair is given, all positions are returned.
@@ -1855,7 +1879,7 @@ class Exchange:
             symbols = None
             if pair:
                 symbols = [pair]
-            positions: list[CcxtPosition] = self._api.fetch_positions(symbols)
+            positions: list[CcxtPosition] = self._api.fetch_positions(symbols, params=params or {})
             self._log_exchange_response("fetch_positions", positions)
             return positions
         except ccxt.DDoSProtection as e:
@@ -2086,7 +2110,7 @@ class Exchange:
                     )
                     ticker = tickers_other.get(pair, None)
                 if ticker:
-                    rate: float | None = safe_value_fallback2(ticker, ticker, "last", "ask", None)
+                    rate: float | None = safe_value_fallback(ticker, "last", "ask", None)
                     if rate and pair.startswith(currency) and not pair.endswith(currency):
                         rate = 1.0 / rate
                     return rate
@@ -2386,6 +2410,16 @@ class Exchange:
             raise OperationalException(e) from e
 
     def get_order_id_conditional(self, order: CcxtOrder) -> str:
+        """
+        Return order id or id_stop (for conditional orders) based on exchange settings
+
+        :param order: ccxt order dict
+        :return: correct order id
+        """
+        if self.get_option("stoploss_query_requires_stop_flag") and (
+            order["type"] in ("stoploss", "stop")
+        ):
+            return safe_value_fallback(order, "id_stop", "id")
         return order["id"]
 
     @retrier
