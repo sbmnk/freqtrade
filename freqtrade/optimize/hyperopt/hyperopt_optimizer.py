@@ -6,14 +6,14 @@ and will be sent to the hyperopt worker processes.
 import logging
 import sys
 import warnings
-from datetime import UTC, datetime
+from datetime import datetime
 from multiprocessing import Manager
 from pathlib import Path
 from typing import Any
 
+import cloudpickle
 import optuna
 from joblib import delayed, dump, load, wrap_non_picklable_objects
-from joblib.externals import cloudpickle
 from optuna.exceptions import ExperimentalWarning
 from optuna.terminator import BestValueStagnationEvaluator, Terminator
 from pandas import DataFrame
@@ -42,6 +42,7 @@ from freqtrade.optimize.space import (
     ft_IntDistribution,
 )
 from freqtrade.resolvers.hyperopt_resolver import HyperOptLossResolver
+from freqtrade.util import dt_now
 from freqtrade.util.dry_run_wallet import get_dry_run_wallet
 
 
@@ -161,7 +162,7 @@ class HyperOptimizer:
         """
         result: dict = {}
 
-        for space in self.spaces.keys():
+        for space in self.spaces:
             if space == "protection":
                 result["protection"] = round_dict(
                     {p.name: params.get(p.name) for p in self.spaces[space]}, 13
@@ -269,7 +270,7 @@ class HyperOptimizer:
         Keep this function as optimized as possible!
         """
         HyperoptStateContainer.set_state(HyperoptState.OPTIMIZE)
-        backtest_start_time = datetime.now(UTC)
+        backtest_start_time = dt_now()
 
         for attr_name, attr in self.backtesting.strategy.enumerate_parameters():
             if attr.in_space and attr.optimize:
@@ -312,7 +313,7 @@ class HyperOptimizer:
             self.backtesting.strategy.max_open_trades = updated_max_open_trades
 
         with self.data_pickle_file.open("rb") as f:
-            processed = load(f, mmap_mode="r")
+            processed = load(f)  # Intentionally not using mmap mode (fd exhaustion)
         if self.analyze_per_epoch:
             # Data is not yet analyzed, rerun populate_indicators.
             processed = self.advise_and_trim(processed)
@@ -320,7 +321,7 @@ class HyperOptimizer:
         bt_results = self.backtesting.backtest(
             processed=processed, start_date=self.min_date, end_date=self.max_date
         )
-        backtest_end_time = datetime.now(UTC)
+        backtest_end_time = dt_now()
         bt_results.update(
             {
                 "backtest_start_time": int(backtest_start_time.timestamp()),
@@ -411,7 +412,7 @@ class HyperOptimizer:
         )
 
         if isinstance(o_sampler, str):
-            if o_sampler not in optuna_samplers_dict.keys():
+            if o_sampler not in optuna_samplers_dict:
                 raise OperationalException(f"Optuna Sampler {o_sampler} not supported.")
             with warnings.catch_warnings():
                 warnings.filterwarnings(action="ignore", category=ExperimentalWarning)

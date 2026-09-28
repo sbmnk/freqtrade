@@ -27,6 +27,10 @@ class FtHas(TypedDict, total=False):
     ohlcv_has_history: bool
     ohlcv_partial_candle: bool
     ohlcv_require_since: bool
+    # Seconds after the candle close time to assume a candle is actually closed
+    ohlcv_late_candle_grace_secs: int
+    # Maximum seconds a pair with missing candles may go unqueried
+    ohlcv_max_poll_interval_secs: int
     ohlcv_volume_currency: str
     ohlcv_candle_limit_per_timeframe: dict[str, int]
     always_require_api_keys: bool
@@ -55,9 +59,14 @@ class FtHas(TypedDict, total=False):
     mark_ohlcv_timeframe: str
     funding_fee_timeframe: str
     funding_fee_candle_limit: int
+    open_interest_candle_limit: int
     floor_leverage: bool
     uses_leverage_tiers: bool
     needs_trading_fees: bool
+    # True if the balance "total" reported for the stake currency is account equity
+    # (wallet balance + unrealized PnL of open positions) instead of plain wallet balance.
+    # See Exchange.balance_includes_unrealized_pnl() for more details.
+    balance_includes_unrealized_pnl: bool
     order_props_in_contracts: list[Literal["amount", "cost", "filled", "remaining"]]
 
     proxy_coin_mapping: dict[str, str]
@@ -67,6 +76,8 @@ class FtHas(TypedDict, total=False):
 
     # Delisting check
     has_delisting: bool
+    # Demo mode - this is not sandbox but an exchange-provided demo mode.
+    supports_demo_trading: bool
 
 
 class Ticker(TypedDict):
@@ -114,6 +125,28 @@ class CcxtPosition(TypedDict):
 
 
 CcxtOrder = dict[str, Any]
+
+
+class LeverageTier(TypedDict):
+    """
+    Represents a single leverage tier returned by the exchange.
+
+    Attributes:
+        minNotional: Minimum notional value (quote currency) for which this tier applies.
+        maxNotional: Maximum notional value (quote currency) for which this tier applies.
+            When ``maxNotional`` is ``None``, the tier is unbounded on the upper side,
+            i.e. there is no maximum notional limit for this tier
+        maintenanceMarginRate: Maintenance margin rate for this tier (fraction, e.g. 0.005 for 0.5%)
+        maxLeverage: Maximum leverage allowed for this tier
+        maintAmt: Optional fixed maintenance margin amount, if provided by the exchange
+    """
+
+    minNotional: float
+    maxNotional: float | None
+    maintenanceMarginRate: float
+    maxLeverage: float
+    maintAmt: float | None
+
 
 # pair, timeframe, candleType, OHLCV, drop last?,
 OHLCVResponse = tuple[str, str, CandleType, list, bool]

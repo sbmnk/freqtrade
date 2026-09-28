@@ -6,6 +6,9 @@ bot constants
 
 from typing import Any, Literal
 
+# DEFAULT_DATAFRAME_COLUMNS is re-exported here for backwards compatibility -
+# the definition lives in freqtrade/candle_columns.py
+from freqtrade.candle_columns import OHLCV_COLUMNS as DEFAULT_DATAFRAME_COLUMNS  # noqa: F401
 from freqtrade.enums import CandleType, PriceType
 
 
@@ -61,10 +64,12 @@ AVAILABLE_PAIRLISTS = [
     "ProducerPairList",
     "RemotePairList",
     "MarketCapPairList",
+    "CrossMarketPairList",
     "AgeFilter",
     "DelistFilter",
     "FullTradesFilter",
     "OffsetFilter",
+    "PairInformationFilter",
     "PerformanceFilter",
     "PrecisionFilter",
     "PriceFilter",
@@ -80,7 +85,6 @@ BACKTEST_CACHE_DEFAULT = "day"
 DRY_RUN_WALLET = 1000
 DATETIME_PRINT_FORMAT = "%Y-%m-%d %H:%M:%S"
 MATH_CLOSE_PREC = 1e-14  # Precision used for float comparisons
-DEFAULT_DATAFRAME_COLUMNS = ["date", "open", "high", "low", "close", "volume"]
 # Don't modify sequence of DEFAULT_TRADES_COLUMNS
 # it has wide consequences for stored trades files
 DEFAULT_TRADES_COLUMNS = ["timestamp", "id", "type", "side", "price", "amount", "cost"]
@@ -194,8 +198,8 @@ MINIMAL_CONFIG = {
     "dry_run": True,
     "exchange": {
         "name": "",
-        "key": "",
-        "secret": "",
+        "api_key": None,
+        "secret": None,
         "pair_whitelist": [],
         "ccxt_async_config": {},
     },
@@ -245,4 +249,11 @@ ExchangeConfig = dict[str, Any]
 IntOrInf = float
 
 
+<<<<<<< HEAD
 EntryExecuteMode = Literal["initial", "pos_adjust", "replace"]
+=======
+EntryExecuteMode = Literal["initial", "pos_adjust", "replace"]
+
+# Prefixes for low-priced coins like 1000PEPE/USDDT:USDT or KPEPE/USDC (hyperliquid)
+PairPrefixes = ["1000", "1000000", "1M", "K"]
+>>>>>>> upstream/develop

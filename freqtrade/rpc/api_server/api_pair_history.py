@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from freqtrade.configuration import validate_config_consistency
 from freqtrade.rpc.api_server.api_pairlists import handleExchangePayload
-from freqtrade.rpc.api_server.api_schemas import PairHistory, PairHistoryRequest
+from freqtrade.rpc.api_server.api_schemas import (
+    PairHistory,
+    PairHistoryRequest,
+    StrategyName,
+)
 from freqtrade.rpc.api_server.deps import get_config, get_exchange
 from freqtrade.rpc.rpc import RPC
 
@@ -15,12 +19,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/pair_history", response_model=PairHistory, tags=["candle data"])
+@router.get("/pair_history", response_model=PairHistory, tags=["Candle data"])
 def pair_history(
     pair: str,
     timeframe: str,
     timerange: str,
-    strategy: str,
+    strategy: StrategyName,
     freqaimodel: str | None = None,
     config=Depends(get_config),
     exchange=Depends(get_exchange),
@@ -43,7 +47,7 @@ def pair_history(
         raise HTTPException(status_code=502, detail=str(e))
 
 
-@router.post("/pair_history", response_model=PairHistory, tags=["candle data"])
+@router.post("/pair_history", response_model=PairHistory, tags=["Candle data"])
 def pair_history_filtered(payload: PairHistoryRequest, config=Depends(get_config)):
     # The initial call to this endpoint can be slow, as it may need to initialize
     # the exchange class.

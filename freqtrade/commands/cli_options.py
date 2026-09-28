@@ -160,7 +160,8 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "timerange": Arg(
         "--timerange",
-        help="Specify what timerange of data to use.",
+        help="Limit action to a specific timerange. Format: "
+        "(`yyyymmdd` or `yyyymmddThhmm` - e.g. `20240101-20240201T1200`).",
     ),
     "max_open_trades": Arg(
         "--max-open-trades",
@@ -215,9 +216,7 @@ AVAILABLE_CLI_OPTIONS = {
         "--strategy-list",
         help="Provide a space-separated list of strategies to backtest. "
         "Please note that timeframe needs to be set either in config "
-        "or via command line. When using this together with `--export trades`, "
-        "the strategy-name is injected into the filename "
-        "(so `backtest-data.json` becomes `backtest-data-SampleStrategy.json`",
+        "or via command line. ",
         nargs="+",
     ),
     "backtest_notes": Arg(
@@ -240,6 +239,14 @@ AVAILABLE_CLI_OPTIONS = {
     "exportfilename": Arg(
         "--backtest-filename",
         "--export-filename",
+        fthelp={
+            "freqtrade backtesting": (
+                "DEPRECATED: This option is deprecated for backtesting and will be removed "
+                "in a future release. "
+                "Using a custom filename for backtest results is no longer supported. "
+                "Use `--backtest-directory` to specify the directory."
+            ),
+        },
         help="Use this filename for backtest results."
         "Example: `--backtest-filename=backtest_results_2020-09-27_16-20-48.json`. "
         "Assumes either `user_data/backtest_results/` or `--export-directory` as base directory.",

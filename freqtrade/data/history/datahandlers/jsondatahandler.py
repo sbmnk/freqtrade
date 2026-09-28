@@ -1,6 +1,5 @@
 import logging
 
-import numpy as np
 from pandas import DataFrame, read_json, to_datetime
 
 from freqtrade import misc
@@ -8,7 +7,7 @@ from freqtrade.configuration import TimeRange, Configuration
 from freqtrade.constants import DEFAULT_DATAFRAME_COLUMNS, DEFAULT_TRADES_COLUMNS
 from freqtrade.data.converter import trades_dict_to_list, trades_list_to_df
 from freqtrade.enums import CandleType, TradingMode
-
+import numpy as np
 from .idatahandler import IDataHandler
 
 
@@ -17,6 +16,14 @@ logger = logging.getLogger(__name__)
 
 class JsonDataHandler(IDataHandler):
     _use_zip = False
+
+    @classmethod
+    def _normalize_columns(cls, data: DataFrame, pair: str, candle_type: CandleType) -> DataFrame:
+        """
+        json data is stored as a positional list of lists ("values" orient), so column
+        names are never persisted - the layout can only be told apart by its width.
+        """
+        return cls._normalize_columns_positional(data, pair, candle_type)
 
     def ohlcv_store(
         self, pair: str, timeframe: str, data: DataFrame, candle_type: CandleType
@@ -28,7 +35,7 @@ class JsonDataHandler(IDataHandler):
         :param pair: Pair - used to generate filename
         :param timeframe: Timeframe - used to generate filename
         :param data: Dataframe containing OHLCV data
-        :param candle_type: Any of the enum CandleType (must match trading mode!)
+        :param candle_type: Candle type to use (spot, futures, funding_rate, ...)
         :return: None
         """
         filename = self._pair_data_filename(self._datadir, pair, timeframe, candle_type)
@@ -63,7 +70,7 @@ class JsonDataHandler(IDataHandler):
         :param timerange: Limit data to be loaded to this timerange.
                         Optionally implemented by subclasses to avoid loading
                         all data where possible.
-        :param candle_type: Any of the enum CandleType (must match trading mode!)
+        :param candle_type: Candle type to use (spot, futures, funding_rate, ...)
         :return: DataFrame with ohlcv data, or empty DataFrame
         """
         filename = self._pair_data_filename(
@@ -95,7 +102,7 @@ class JsonDataHandler(IDataHandler):
         :param pair: Pair
         :param timeframe: Timeframe this ohlcv data is for
         :param data: Data to append.
-        :param candle_type: Any of the enum CandleType (must match trading mode!)
+        :param candle_type: Candle type to use (spot, futures, funding_rate, ...)
         """
         raise NotImplementedError()
 
@@ -108,6 +115,9 @@ class JsonDataHandler(IDataHandler):
         :param trading_mode: Trading mode to use (used to determine the filename)
         """
         filename = self._pair_trades_filename(self._datadir, pair, trading_mode)
+        # Convert StringDtype columns to object to avoid NaN serialization issues
+        for col in data.select_dtypes(include="string").columns:
+            data[col] = data[col].astype(object).where(data[col].notna(), other=None)
         trades = data.values.tolist()
         misc.file_dump_json(filename, trades, is_zip=self._use_zip)
 
@@ -141,7 +151,6 @@ class JsonDataHandler(IDataHandler):
             # Convert trades dict to list
             logger.info("Old trades format detected - converting")
             tradesdata = trades_dict_to_list(tradesdata)
-            pass
         return trades_list_to_df(tradesdata, convert=False)
 
     @classmethod
