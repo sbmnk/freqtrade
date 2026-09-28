@@ -127,8 +127,8 @@ def clean_ohlcv_dataframe(
         'number_of_trades':'max',
         'taker_buy_volume':'max'
     })
-    applicable_grouping_rules = {k:v for k,v in grouping_rules.items() if k in data}
-    data = data.groupby(by='date', as_index=False, sort=True).agg(applicable_grouping_rules)
+    applicable_grouping_rules = {k:v for k,v in grouping_rules.items() if k in dataframe}
+    dataframe = dataframe.groupby(by='date', as_index=False, sort=True).agg(applicable_grouping_rules)
     # eliminate partial candle
     if drop_incomplete:
         dataframe.drop(dataframe.tail(1).index, inplace=True)
