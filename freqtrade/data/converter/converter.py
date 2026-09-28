@@ -117,7 +117,7 @@ def clean_ohlcv_dataframe(
     """
     # group by index and aggregate results to eliminate duplicate ticks
     grouping_rules = get_candle_agg_dict(candle_type)
-    grouping_rules.updatge({
+    grouping_rules.update({
         'open': 'first',
         'high': 'max',
         'low': 'min',
