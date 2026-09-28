@@ -249,11 +249,7 @@ ExchangeConfig = dict[str, Any]
 IntOrInf = float
 
 
-<<<<<<< HEAD
-EntryExecuteMode = Literal["initial", "pos_adjust", "replace"]
-=======
 EntryExecuteMode = Literal["initial", "pos_adjust", "replace"]
 
 # Prefixes for low-priced coins like 1000PEPE/USDDT:USDT or KPEPE/USDC (hyperliquid)
 PairPrefixes = ["1000", "1000000", "1M", "K"]
->>>>>>> upstream/develop

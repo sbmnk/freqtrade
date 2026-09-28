@@ -60,16 +60,11 @@ def ohlcv_to_dataframe(
     :return: DataFrame
     """
     logger.debug(f"Converting candle (OHLCV) data to dataframe for pair {pair}.")
-<<<<<<< HEAD
     try:
         cols = Configuration.get_static_config()["dataframe_columns"]
         df = DataFrame(ohlcv, columns=cols)
     except:
-        cols = DEFAULT_DATAFRAME_COLUMNS
-        df = DataFrame(ohlcv, columns=cols)
-=======
-    df = DataFrame(ohlcv, columns=get_candle_columns(candle_type))
->>>>>>> upstream/develop
+        df = DataFrame(ohlcv, columns=get_candle_columns(candle_type))
 
     # Floor date to seconds to account for exchange imprecisions
     from freqtrade.exchange import timeframe_to_floor_freq
@@ -81,16 +76,11 @@ def ohlcv_to_dataframe(
     # Some exchanges return int values for Volume and even for OHLC.
     # Convert them since TA-LIB indicators used in the strategy assume floats
     # and fail with exception...
-<<<<<<< HEAD
+    df = df.astype(dtype=get_candle_dtypes(candle_type))
     df_typing = {'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
                           'volume': 'float', 'quote_asset_volume': 'float', 'number_of_trades': 'float', 'taker_buy_volume': 'float'}
     df_typing = {k:v for k,v in df_typing.items() if k in df}
     df = df.astype(dtype=df_typing)
-    return clean_ohlcv_dataframe(df, timeframe, pair,
-                                 fill_missing=fill_missing,
-                                 drop_incomplete=drop_incomplete)
-=======
-    df = df.astype(dtype=get_candle_dtypes(candle_type))
     return clean_ohlcv_dataframe(
         df,
         timeframe,
@@ -99,7 +89,6 @@ def ohlcv_to_dataframe(
         drop_incomplete=drop_incomplete,
         candle_type=candle_type,
     )
->>>>>>> upstream/develop
 
 
 def clean_ohlcv_dataframe(
@@ -127,8 +116,8 @@ def clean_ohlcv_dataframe(
     :return: DataFrame
     """
     # group by index and aggregate results to eliminate duplicate ticks
-<<<<<<< HEAD
-    grouping_rules = {
+    grouping_rules = get_candle_agg_dict(candle_type)
+    grouping_rules.updatge({
         'open': 'first',
         'high': 'max',
         'low': 'min',
@@ -137,14 +126,9 @@ def clean_ohlcv_dataframe(
         'quote_volume':'max',
         'number_of_trades':'max',
         'taker_buy_volume':'max'
-    }
+    })
     applicable_grouping_rules = {k:v for k,v in grouping_rules.items() if k in data}
     data = data.groupby(by='date', as_index=False, sort=True).agg(applicable_grouping_rules)
-=======
-    dataframe = dataframe.groupby(by="date", as_index=False, sort=True).agg(
-        get_candle_agg_dict(candle_type)
-    )
->>>>>>> upstream/develop
     # eliminate partial candle
     if drop_incomplete:
         dataframe.drop(dataframe.tail(1).index, inplace=True)
